@@ -6,7 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1568FD7E2EB05C6D0070D51F /* Script.sh in Resources */ = {isa = PBXBuildFile; fileRef = 1568FD7D2EB05C6D0070D51F /* Script.sh */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		1568FD7D2EB05C6D0070D51F /* Script.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = Script.sh; sourceTree = "<group>"; };
 		15E6F6E22EB01C1200DE9810 /* Sona.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sona.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -32,6 +37,7 @@
 		15E6F6D92EB01C1200DE9810 = {
 			isa = PBXGroup;
 			children = (
+				1568FD7D2EB05C6D0070D51F /* Script.sh */,
 				15E6F6E42EB01C1200DE9810 /* Sona */,
 				15E6F6E32EB01C1200DE9810 /* Products */,
 			);
@@ -109,6 +115,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1568FD7E2EB05C6D0070D51F /* Script.sh in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

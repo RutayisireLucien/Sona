@@ -6,7 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1568FD7E2EB05C6D0070D51F /* Script.sh in Resources */ = {isa = PBXBuildFile; fileRef = 1568FD7D2EB05C6D0070D51F /* Script.sh */; };
+		1597A1FE2EB826990043FF3B /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 1597A1FD2EB826990043FF3B /* FirebaseCore */; };
+		1597A2002EB826AA0043FF3B /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 1597A1FF2EB826AA0043FF3B /* FirebaseAuth */; };
+		1597A2022EB826B60043FF3B /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 1597A2012EB826B60043FF3B /* FirebaseFirestore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		1568FD7D2EB05C6D0070D51F /* Script.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = Script.sh; sourceTree = "<group>"; };
 		15E6F6E22EB01C1200DE9810 /* Sona.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sona.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -23,16 +31,28 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1597A1FE2EB826990043FF3B /* FirebaseCore in Frameworks */,
+				1597A2002EB826AA0043FF3B /* FirebaseAuth in Frameworks */,
+				1597A2022EB826B60043FF3B /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1597A1FC2EB826990043FF3B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		15E6F6D92EB01C1200DE9810 = {
 			isa = PBXGroup;
 			children = (
+				1568FD7D2EB05C6D0070D51F /* Script.sh */,
 				15E6F6E42EB01C1200DE9810 /* Sona */,
+				1597A1FC2EB826990043FF3B /* Frameworks */,
 				15E6F6E32EB01C1200DE9810 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -65,6 +85,9 @@
 			);
 			name = Sona;
 			packageProductDependencies = (
+				1597A1FD2EB826990043FF3B /* FirebaseCore */,
+				1597A1FF2EB826AA0043FF3B /* FirebaseAuth */,
+				1597A2012EB826B60043FF3B /* FirebaseFirestore */,
 			);
 			productName = Sona;
 			productReference = 15E6F6E22EB01C1200DE9810 /* Sona.app */;
@@ -94,6 +117,9 @@
 			);
 			mainGroup = 15E6F6D92EB01C1200DE9810;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				1597A1FB2EB825F30043FF3B /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 15E6F6E32EB01C1200DE9810 /* Products */;
 			projectDirPath = "";
@@ -109,6 +135,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1568FD7E2EB05C6D0070D51F /* Script.sh in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -322,6 +349,35 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		1597A1FB2EB825F30043FF3B /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.5.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1597A1FD2EB826990043FF3B /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1597A1FB2EB825F30043FF3B /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		1597A1FF2EB826AA0043FF3B /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1597A1FB2EB825F30043FF3B /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		1597A2012EB826B60043FF3B /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1597A1FB2EB825F30043FF3B /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 15E6F6DA2EB01C1200DE9810 /* Project object */;
 }

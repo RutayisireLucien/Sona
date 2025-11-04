@@ -9,7 +9,18 @@ import SwiftUI
 
 struct MainAppView: View {
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        TabView {
+            MoodSelectionView()
+                .tabItem {
+                    Label("Moods", systemImage: "waveform")
+                }
+
+            ProfileView()
+                .tabItem {
+                    Label("Profile", systemImage: "person.circle")
+                }
+        }
+        .tint(.purple)
     }
 }
 

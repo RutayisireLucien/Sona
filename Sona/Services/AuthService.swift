@@ -34,7 +34,7 @@ class AuthService: ObservableObject{
             let appUser = AppUser(id: uid, email: email, displayName: displayName)
             
             do{
-                try self.db.collection("Users").document(uid).setData(from: appUser){
+                try self.db.collection("users").document(uid).setData(from: appUser){
                     erroe in
                     if let error = error {
                         print(error.localizedDescription)
@@ -61,7 +61,7 @@ class AuthService: ObservableObject{
                 completion(.failure(error))
             } else if let user = result?.user {
                 // uid
-                let uid = user.uid
+                _ = user.uid
 
                 // fetch appuser from firestore
                 self.fetchCurrentAppUser { res in

@@ -25,7 +25,7 @@ struct ContentView: View {
                 //register screen switcher
                 AuthGate()
             } else {
-                ProfileView()
+                MoodSelectionView()
             }
         }
     }

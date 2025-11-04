@@ -6,3 +6,12 @@
 //
 
 import Foundation
+import FirebaseFirestore
+
+struct Mood: Identifiable, Codable {
+    @DocumentID var id: String?
+    var name: String
+    var emoji: String
+    var description: String?
+    var colorName: String
+}

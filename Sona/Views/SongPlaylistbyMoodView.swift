@@ -28,8 +28,7 @@ struct SongPlaylistByMoodView: View {
                 ScrollView {
                     VStack(spacing: 10) {
                         ForEach(songs, id: \.id) { song in
-                            NavigationLink(destination: NowPlayingView(song: song, mood: mood))
-                                {
+                            NavigationLink(destination: NowPlayingView(mood: mood, startSong: song)) {
                                 HStack(spacing: 16) {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(song.title)
@@ -43,7 +42,8 @@ struct SongPlaylistByMoodView: View {
                                 }
                                 .padding()
                                 .background(
-                                    RoundedRectangle(cornerRadius: 15)    .fill(Color.black.opacity(0.25))
+                                    RoundedRectangle(cornerRadius: 15)
+                                        .fill(Color.black.opacity(0.25))
                                 )
                             }
                         }

@@ -58,7 +58,8 @@ struct RegisterView: View {
                         .foregroundColor(.white)
                     
                     // Display Name field
-                    TextField("", text: $displayName, prompt: Text("Enter Display Name").foregroundColor(.white.opacity(0.6)))
+                    TextField("", text: $displayName, prompt: Text("Enter Display Name")
+                        .foregroundColor(.white.opacity(0.6)))
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 12)

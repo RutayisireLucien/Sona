@@ -12,7 +12,7 @@ struct MainAppView: View {
         TabView {
             MoodSelectionView()
                 .tabItem {
-                    Label("Moods", systemImage: "waveform")
+                    Label("Sona", systemImage: "waveform")
                 }
 
             ProfileView()
@@ -20,7 +20,7 @@ struct MainAppView: View {
                     Label("Profile", systemImage: "person.circle")
                 }
         }
-        .tint(.purple)
+        .tint(.pink)//Made it pink cuz it looks more poppish
     }
 }
 

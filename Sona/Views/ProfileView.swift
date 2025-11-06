@@ -44,6 +44,8 @@ struct ProfileView: View {
                 )
                 .padding(.horizontal)
                 
+                .fontWeight(.heavy)
+                
                 // Update display name
                 VStack(spacing: 12) {
                     TextField("", text: $newName, prompt: Text("New Display Name").foregroundColor(.white.opacity(0.6)))

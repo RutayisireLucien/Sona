@@ -25,7 +25,7 @@ struct ContentView: View {
                 //register screen switcher
                 AuthGate()
             } else {
-                MoodSelectionView()
+                MainAppView()//Was wondering why profile toggle wasnt showing up....
             }
         }
     }

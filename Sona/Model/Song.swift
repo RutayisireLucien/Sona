@@ -14,4 +14,5 @@ struct Song: Identifiable, Codable {
     var artist: String
     var album: String?
     var moodID: String
+    let fileName: String?
 }

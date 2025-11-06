@@ -43,7 +43,7 @@ struct MoodSelectionView: View {
 //                                            .foregroundColor(.white.opacity(0.7))
 //                                            .multilineTextAlignment(.center)
 //                                            .frame(height: 35)
-//                                    }
+//                                    } Tyler - I dont think we should. Safe to delete commented code block.
                                 }
                                 .padding(15)
                                 .frame(maxWidth: 170, minHeight: 105)
@@ -64,7 +64,7 @@ struct MoodSelectionView: View {
                     Text("Select Your Mood 🎧")
                         .padding(.top, 60)
                         .foregroundColor(.white)
-                        .font(.title)
+                        .font(.title.bold())
                 }
             }
         }

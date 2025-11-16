@@ -12,7 +12,8 @@ struct DummyData {
         Mood(id: "1", name: "Happy", emoji: "😄", description: "Upbeat songs to boost your mood", colorName: "happyColor"),
         Mood(id: "2", name: "Sleep", emoji: "🌙", description: "Relax and unwind vibes", colorName: "sleepColor"),
         Mood(id: "3", name: "Fit", emoji: "💪", description: "Get pumped and focused", colorName: "fitColor"),
-        Mood(id: "4", name: "Calm", emoji: "😄", description: "Calm state of mind", colorName: "fitColor")
+        Mood(id: "4", name: "Calm", emoji: "😄", description: "Calm state of mind", colorName: "fitColor"),
+        Mood(id: "5", name: "None", emoji: "🌙", description: "No specific Mood", colorName: "noneColor")
     ]
     
     static let songs: [Song] = [

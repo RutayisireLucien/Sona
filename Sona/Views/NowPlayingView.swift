@@ -17,8 +17,14 @@ struct NowPlayingView: View {
     @State private var isPlaying = false
     @State private var isFavourite = false
     @State private var progress: Double = 0.0
-    @State private var transitionDirection: Edge = .top // for up/down animation (Differing from spotify and apple on purpose.)
+    @State private var transitionDirection: Edge = .top // for up/down animation (Differing from spotify and apple on purpose, cuz we're better.)
     @State private var audioPlayer: AVAudioPlayer?
+    @StateObject private var audioManager = AudioManager()
+    @State private var contextDelegate = AudioDelegate()
+    @State private var isShuffling = false
+    @State private var shuffleOrder: [Int] = []
+    @State private var shufflePosition: Int = 0
+
     
     init(mood: Mood, startSong: Song? = nil) {
         self.mood = mood
@@ -34,7 +40,7 @@ struct NowPlayingView: View {
     
     
     var body: some View {
-        let song = songs[currentIndex]//Ignore the warning, its used for the animation function.
+        let _song = songs[currentIndex]//If theres a warning, Ignore, its used for the animation function.
         
         ZStack {
             // Background gradient
@@ -64,6 +70,17 @@ struct NowPlayingView: View {
                 //COntent that stays in place
                 VStack(spacing: 20) {
                     HStack {
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                toggleShuffle()
+                            }
+                        } label: {
+                            Image(systemName: isShuffling ? "shuffle.circle.fill" : "shuffle")
+                                .font(.system(size: 28))
+                                .foregroundColor(.white)
+                                .shadow(color: .black.opacity(0.4), radius: 5)
+                        }
+                        .padding(.leading)
                         Spacer()
                         Button {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -80,15 +97,15 @@ struct NowPlayingView: View {
                     
                     // Progress bar + times
                     VStack(spacing: 8) {
-                        ProgressView(value: progress)
+                        ProgressView(value: audioManager.progress)
                             .progressViewStyle(.linear)
                             .tint(.white)
                             .padding(.horizontal)
                         
                         HStack {
-                            Text("1:24")
+                            Text(audioManager.formatTime(audioPlayer?.currentTime ?? 0))
                             Spacer()
-                            Text("3:45")
+                            Text(audioManager.formatTime(audioPlayer?.duration ?? 0))
                         }
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.7))
@@ -152,15 +169,27 @@ struct NowPlayingView: View {
     
     private func playNext() { // Added by Tyler
         transitionDirection = .bottom
-        
+        audioManager.stopTimer()
         audioPlayer?.stop()
-        audioPlayer = nil
         isPlaying = false;
+        
         withAnimation {
-            if currentIndex < songs.count - 1 {
-                currentIndex += 1
-            } else {
-                currentIndex = 0
+            //Shuffle code
+            if isShuffling {
+                shufflePosition += 1
+                
+                if shufflePosition >= shuffleOrder.count {
+                    shufflePosition = 0
+                }
+                
+                currentIndex = shuffleOrder[shufflePosition]
+                
+            } else {//Regular playNext() code
+                if currentIndex < songs.count - 1 {
+                    currentIndex += 1
+                } else {
+                    currentIndex = 0
+                }
             }
         }
         playSong(songs[currentIndex])
@@ -169,51 +198,113 @@ struct NowPlayingView: View {
     private func togglePlay() {// ==
         let song = songs[currentIndex]
         
-        if isPlaying {
-            audioPlayer?.pause()
-            isPlaying = false
+        if let player = audioPlayer {
+            if isPlaying {
+                player.pause()
+                isPlaying = false
+                audioManager.stopTimer()
+            }else {
+                player.play()
+                audioManager.startTimer(for: player)
+                isPlaying = true
+            }
         } else {
             playSong(song)
         }
     }
     
-    private func playSong(_ song: Song) {// ==
-            guard let fileName = song.fileName,
-                  let url = Bundle.main.url(forResource: fileName, withExtension: "mp3") ??
-                            Bundle.main.url(forResource: fileName, withExtension: "m4a") else {
-                //print("⚠️ Audio file for \(song.title) not found.") --LINK TO ERROR
-                isPlaying.toggle()//Despite there being no file, for test purposes keep this.
-                return
-            }
-            
-            do {
-                audioPlayer = try AVAudioPlayer(contentsOf: url)
-                audioPlayer?.prepareToPlay()
-                audioPlayer?.play()
-                isPlaying = true
-            } catch {
-                print("Audio playback error: \(error.localizedDescription)")
-                isPlaying.toggle()//And this!
-            }
+    private func playSong(_ song: Song) {
+        guard let fileName = song.fileName,
+              let url = Bundle.main.url(forResource: fileName, withExtension: "mp3") ??
+                        Bundle.main.url(forResource: fileName, withExtension: "m4a") else {
+
+            // File missing → fallback UI behavior
+            audioPlayer = nil
+            audioManager.progress = 0.5
+            isPlaying.toggle()
+            return
         }
+
+        do {
+            // Create player only once
+            let player = try AVAudioPlayer(contentsOf: url)
+            audioPlayer = player
+
+            player.delegate = contextDelegate
+            
+            //Auto-skip
+            contextDelegate.onFinish = { [self] in
+                self.audioManager.stopTimer()
+
+                withAnimation(.easeInOut(duration: 0.5)) {
+                    self.transitionDirection = .bottom
+                    self.playNext()
+                }
+            }
+
+            // Prepare & play
+            player.prepareToPlay()
+            player.play()
+            isPlaying = true
+
+            // Start updating progress
+            audioManager.startTimer(for: player)
+
+        } catch {
+            print("Audio playback error: \(error.localizedDescription)")
+            audioManager.progress = 0.0
+            isPlaying.toggle()
+        }
+    }
+
     
-    private func playPrevious() { // Added by Tyler
+    private func playPrevious() { // ==
         transitionDirection = .top
-        
+        audioManager.stopTimer()
         audioPlayer?.stop()
-        audioPlayer = nil
         isPlaying = false;
         withAnimation {
-            if currentIndex > 0 {
-                currentIndex -= 1
+            
+            if isShuffling {
+                shufflePosition -= 1
+                
+                if shufflePosition < 0 {
+                    shufflePosition = shuffleOrder.count - 1
+                }
+                
+                currentIndex = shuffleOrder[shufflePosition]
             } else {
-                currentIndex = songs.count - 1
+                if currentIndex > 0 {
+                    currentIndex -= 1
+                } else {
+                    currentIndex = songs.count - 1
+                }
+                isPlaying = true
             }
-            isPlaying = true
+        }
+        playSong(songs[currentIndex])
+    }
+    
+    //shuffle commands:
+    
+    private func toggleShuffle() {
+        isShuffling.toggle()
+        
+        if isShuffling {
+            let indeces = Array(0..<songs.count).filter { $0 != currentIndex }
+            shuffleOrder = indeces.shuffled()
+            
+            
+            shuffleOrder.insert(currentIndex, at: 0)
+            shufflePosition = 0
+        }
+        else {
+            shuffleOrder = []
+            shufflePosition = 0
         }
     }
 }
 
 #Preview {
-    NowPlayingView(mood: DummyData.moods.first!, startSong: DummyData.songs[2])
+    NowPlayingView(mood: DummyData.moods[4], startSong: DummyData.songs[6])//Can put the indexes wherever. Leave on puzzlebox for music.
 }

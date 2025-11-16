@@ -36,14 +36,6 @@ struct MoodSelectionView: View {
                                     Text(mood.name)
                                         .font(.title3.bold())
                                         .foregroundColor(.white)
-                                    //NOT SURE ABOUT INCLUDING THE DESC
-//                                    if let desc = mood.description {
-//                                        Text(desc)
-//                                            .font(.footnote)
-//                                            .foregroundColor(.white.opacity(0.7))
-//                                            .multilineTextAlignment(.center)
-//                                            .frame(height: 35)
-//                                    } Tyler - I dont think we should. Safe to delete commented code block.
                                 }
                                 .padding(15)
                                 .frame(maxWidth: 170, minHeight: 105)
@@ -67,6 +59,9 @@ struct MoodSelectionView: View {
                         .font(.title.bold())
                 }
             }
+           
+            
+            SearchView()
         }
     }
 }

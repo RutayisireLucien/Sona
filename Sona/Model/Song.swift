@@ -12,7 +12,7 @@ struct Song: Identifiable, Codable {
     @DocumentID var id: String?
     var title: String
     var artist: String
-    var album: String?
+    var albumID: String?
     var moodID: String
     let fileName: String?
 }

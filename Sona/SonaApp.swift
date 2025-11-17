@@ -25,6 +25,9 @@ struct SonaApp: App {
         WindowGroup {
             NavigationView {
                 ContentView()
+                    .onAppear() {
+                        FirestoreSeeder.seedUserData(for: "test-user-id")
+                    }
             }
         }
     }

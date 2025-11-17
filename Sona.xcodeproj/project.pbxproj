@@ -11,6 +11,7 @@
 		1597A1FE2EB826990043FF3B /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 1597A1FD2EB826990043FF3B /* FirebaseCore */; };
 		1597A2002EB826AA0043FF3B /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 1597A1FF2EB826AA0043FF3B /* FirebaseAuth */; };
 		1597A2022EB826B60043FF3B /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 1597A2012EB826B60043FF3B /* FirebaseFirestore */; };
+		9D97F2562EC6C804008840CF /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 9D97F2552EC6C804008840CF /* FirebaseStorage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +33,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1597A1FE2EB826990043FF3B /* FirebaseCore in Frameworks */,
+				9D97F2562EC6C804008840CF /* FirebaseStorage in Frameworks */,
 				1597A2002EB826AA0043FF3B /* FirebaseAuth in Frameworks */,
 				1597A2022EB826B60043FF3B /* FirebaseFirestore in Frameworks */,
 			);
@@ -88,6 +90,7 @@
 				1597A1FD2EB826990043FF3B /* FirebaseCore */,
 				1597A1FF2EB826AA0043FF3B /* FirebaseAuth */,
 				1597A2012EB826B60043FF3B /* FirebaseFirestore */,
+				9D97F2552EC6C804008840CF /* FirebaseStorage */,
 			);
 			productName = Sona;
 			productReference = 15E6F6E22EB01C1200DE9810 /* Sona.app */;
@@ -378,6 +381,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 1597A1FB2EB825F30043FF3B /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		9D97F2552EC6C804008840CF /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1597A1FB2EB825F30043FF3B /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

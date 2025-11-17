@@ -9,18 +9,20 @@ import SwiftUI
 
 struct MainAppView: View {
     var body: some View {
-        TabView {
-            MoodSelectionView()
-                .tabItem {
-                    Label("Sona", systemImage: "waveform")
-                }
-
-            ProfileView()
-                .tabItem {
-                    Label("Profile", systemImage: "person.circle")
-                }
+        ZStack(alignment: .bottom) {
+            TabView {
+                MoodSelectionView()
+                    .tabItem {
+                        Label("Sona", systemImage: "waveform")
+                    }
+                
+                ProfileView()
+                    .tabItem {
+                        Label("Profile", systemImage: "person.circle")
+                    }
+            }
+            .tint(.pink)//Made it pink cuz it looks more poppish
         }
-        .tint(.pink)//Made it pink cuz it looks more poppish
     }
 }
 

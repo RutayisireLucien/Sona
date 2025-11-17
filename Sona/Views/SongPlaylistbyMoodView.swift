@@ -4,18 +4,18 @@
 //
 //  Created by Alvaro Limaymanta Soria on 2025-11-03.
 //
+// Shows now songs for a mood, fetched from Firestore only for the current user. (2025-11-15)
 
+import FirebaseAuth
 import SwiftUI
 
 struct SongPlaylistByMoodView: View {
     let mood: Mood
-    var songs: [Song] {
-        DummyData.songs.filter { $0.moodID == mood.id }
-    }
+    @ObservedObject private var songService = SongService.shared
+    @State private var songs: [Song] = []
     
     var body: some View {
         ZStack {
-            // background color from mood
             Color(mood.colorName)
                 .ignoresSafeArea()
             
@@ -28,7 +28,7 @@ struct SongPlaylistByMoodView: View {
                 ScrollView {
                     VStack(spacing: 10) {
                         ForEach(songs, id: \.id) { song in
-                            NavigationLink(destination: NowPlayingView(mood: mood, startSong: song)) {
+                            NavigationLink(destination: NowPlayingView(mood: mood, startSong: song, songs: songs)) {
                                 HStack(spacing: 16) {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(song.title)
@@ -41,10 +41,8 @@ struct SongPlaylistByMoodView: View {
                                     Spacer()
                                 }
                                 .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 15)
-                                        .fill(Color.black.opacity(0.25))
-                                )
+                                .background(RoundedRectangle(cornerRadius: 15)
+                                    .fill(Color.black.opacity(0.25)))
                             }
                         }
                     }
@@ -52,9 +50,26 @@ struct SongPlaylistByMoodView: View {
                 }
             }
         }
+        .onAppear {
+            fetchSongsForMood()
+        }
+    }
+    
+    private func fetchSongsForMood() {
+        guard let uid = FirebaseAuth.Auth.auth().currentUser?.uid else { return }
+        guard let moodID = mood.id else { return }
+        
+        songService.fetchSongsByMood(moodID, userID: uid) { result in
+            switch result {
+            case .success(let fetchedSongs):
+                self.songs = fetchedSongs
+            case .failure(let error):
+                print("Error fetching songs: \(error.localizedDescription)")
+            }
+        }
     }
 }
 
 #Preview {
-    SongPlaylistByMoodView(mood: DummyData.moods.first!)
+    SongPlaylistByMoodView(mood: Mood(id: "1", name: "Happy", emoji: "😄", description: "", colorName: "happyColor"))
 }

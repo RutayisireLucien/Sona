@@ -4,7 +4,6 @@
 //
 //  Created by Alvaro Limaymanta Soria on 2025-11-03.
 //
-
 // Play selected songs, updates album cover on song change, fetches data from Firestore not hardcoded data (DummyData) (2025-11-15)
 
 import SwiftUI
@@ -162,7 +161,6 @@ struct NowPlayingView: View {
         VStack(spacing: 40) {
             // Album art
             ZStack {
-                //Added by Alvaro
                 // Get album URL from Firestore
                 if let urlString = album?.coverURL,
                    let url = URL(string: urlString) {
@@ -180,7 +178,7 @@ struct NowPlayingView: View {
                     }
                     
                 } else {
-                    // Fallback placeholder (no album cover)
+                    // Fallback placeholder
                     RoundedRectangle(cornerRadius: 25)
                         .fill(Color.white.opacity(0.15))
                         .frame(width: 320, height: 320)
@@ -200,7 +198,7 @@ struct NowPlayingView: View {
         }
     }
     
-    private func playNext() { //Added by Tyler
+    private func playNext() {
         transitionDirection = .bottom
         audioManager.stopTimer()
         audioPlayer?.stop()

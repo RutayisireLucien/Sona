@@ -60,7 +60,8 @@ struct MoodSelectionView: View {
                         .font(.title.bold())
                 }
             }
-            SearchView() //Added by Tyler
+           
+            SearchView()
         }
         .onAppear {
             moodService.listenToUserMoods()

@@ -15,19 +15,22 @@ struct MoodSelectionView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Background gradient
+                // Background colour
                 LinearGradient(
-                    colors: [Color(red: 0.11, green: 0.00, blue: 0.15),
-                             Color(red: 0.24, green: 0.00, blue: 0.46)],
+                    colors: [
+                        Color(red: 0.11, green: 0.00, blue: 0.15),
+                        Color(red: 0.24, green: 0.00, blue: 0.46)
+                    ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 .ignoresSafeArea()
-                
+
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 20) {
                         ForEach(moodService.userMoods) { mood in
                             NavigationLink(destination: SongPlaylistByMoodView(mood: mood)) {
+                                
                                 VStack(spacing: 8) {
                                     Text(mood.emoji)
                                         .font(.system(size: 37))
@@ -37,8 +40,10 @@ struct MoodSelectionView: View {
                                 }
                                 .padding(15)
                                 .frame(maxWidth: 170, minHeight: 105)
-                                .background(RoundedRectangle(cornerRadius: 20)
-                                    .fill(Color(mood.colorName)))
+                                .background(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(Color(mood.colorName))
+                                )
                             }
                             .buttonStyle(.plain)
                         }
@@ -46,6 +51,7 @@ struct MoodSelectionView: View {
                     .padding()
                 }
             }
+            //We use toolbar to be able to change the title style
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Text("Select Your Mood 🎧")
@@ -54,6 +60,7 @@ struct MoodSelectionView: View {
                         .font(.title.bold())
                 }
             }
+            SearchView() //Added by Tyler
         }
         .onAppear {
             moodService.listenToUserMoods()

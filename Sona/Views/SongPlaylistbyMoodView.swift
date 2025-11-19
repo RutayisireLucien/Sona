@@ -4,7 +4,7 @@
 //
 //  Created by Alvaro Limaymanta Soria on 2025-11-03.
 //
-// Shows now songs for a mood, fetched from Firestore only for the current user. (2025-11-15)
+// // Shows now songs for a mood, fetched from Firestore only for the current user. (2025-11-15)
 
 import FirebaseAuth
 import SwiftUI
@@ -41,8 +41,10 @@ struct SongPlaylistByMoodView: View {
                                     Spacer()
                                 }
                                 .padding()
-                                .background(RoundedRectangle(cornerRadius: 15)
-                                    .fill(Color.black.opacity(0.25)))
+                                .background(
+                                    RoundedRectangle(cornerRadius: 15)
+                                        .fill(Color.black.opacity(0.25))
+                                )
                             }
                         }
                     }
@@ -55,6 +57,7 @@ struct SongPlaylistByMoodView: View {
         }
     }
     
+    //Added by Alvaro
     private func fetchSongsForMood() {
         guard let uid = FirebaseAuth.Auth.auth().currentUser?.uid else { return }
         guard let moodID = mood.id else { return }
@@ -69,6 +72,7 @@ struct SongPlaylistByMoodView: View {
         }
     }
 }
+
 
 #Preview {
     SongPlaylistByMoodView(mood: Mood(id: "1", name: "Happy", emoji: "😄", description: "", colorName: "happyColor"))

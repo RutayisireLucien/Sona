@@ -87,6 +87,8 @@ struct ProfileView: View {
                 
                 // Sign out
                 Button(role: .destructive) {
+                    //Added by Alvaro, once logged out the song stops
+                    PlayerStateManager.shared.stop()
                     let result = auth.signOut()
                     if case .failure(let failure) = result {
                         self.errorMessage = failure.localizedDescription

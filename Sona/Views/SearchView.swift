@@ -75,7 +75,8 @@ struct SearchView: View {
                     VStack(spacing: 8) {
                         if searchMode == .songs {
                             ForEach(filteredSongs.prefix(2), id: \.id) { song in
-                                NavigationLink(destination: NowPlayingView(mood: moodFor(song), startSong: song, songs: songService.allSongs)) {
+                                NavigationLink(destination: NowPlayingView(mood: moodFor(song), startSong: song, songs: songService.allSongs))
+                                    {
                                     HStack(spacing: 16) {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(song.title)
@@ -96,7 +97,8 @@ struct SearchView: View {
                             }
                         } else {
                             ForEach(filteredMoods.prefix(2), id: \.id) { mood in
-                                NavigationLink(destination: NowPlayingView(mood: mood, startSong: songsForMood(mood).first, songs: songsForMood(mood))) {
+                                NavigationLink(destination: NowPlayingView(mood: mood, startSong: songsForMood(mood).first, songs: songsForMood(mood)))
+                                    {
                                     HStack(spacing: 16) {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(mood.name)

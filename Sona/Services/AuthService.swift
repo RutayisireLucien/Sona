@@ -41,7 +41,7 @@ class AuthService: ObservableObject{
                         completion(.failure(error))
                     }
                     
-                    FirestoreSeeder.seedUserData(for: uid, ) //Added by Alvaro
+                    FirestoreSeeder.seedUserData(for: uid) //Added by Alvaro
 
                     DispatchQueue.main.async {
                         self.currentUser = appUser

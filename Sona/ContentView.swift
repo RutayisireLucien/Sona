@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var auth = AuthService.shared
     @State private var isLoaded = false
+    @StateObject private var playerState = PlayerStateManager.shared
 
     var body: some View {
         Group {
@@ -24,8 +25,10 @@ struct ContentView: View {
                 // login
                 //register screen switcher
                 AuthGate()
+                    .environmentObject(playerState)
             } else {
-                MainAppView()//Was wondering why profile toggle wasnt showing up....
+                MainAppView()
+                    .environmentObject(playerState)
             }
         }
     }

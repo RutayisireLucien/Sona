@@ -5,6 +5,7 @@
 //  Created by Alvaro Limaymanta Soria on 2025-11-13.
 //
 // Fetches and saves all moods and also listens to only logged user's ones. (2025-11-15)
+// Added mood deletion(2025-11-20)
 
 import Foundation
 import FirebaseFirestore
@@ -36,7 +37,7 @@ class MoodService: ObservableObject {
                     try? $0.data(as: Mood.self)
                 } ?? []
 
-                DispatchQueue.main.async {
+                DispatchQueue.main.async { //Updates the UI
                     self.userMoods = items
                 }
             }
@@ -55,13 +56,15 @@ class MoodService: ObservableObject {
 
         // Generate ID if nil
         let moodID = mood.id ?? UUID().uuidString
+        var moodWithId = mood
+        moodWithId.id = moodID
 
         do {
             try db.collection("users")
                 .document(uid)
                 .collection("moods")
                 .document(moodID)
-                .setData(from: mood) { error in
+                .setData(from: moodWithId) { error in
 
                     if let error = error {
                         completion(.failure(error))
@@ -72,5 +75,25 @@ class MoodService: ObservableObject {
         } catch {
             completion(.failure(error))
         }
+    }
+    
+    //Added by Alvaro
+    func deleteMood(_ moodId: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            completion(.failure(SimpleError("No user logged in.")))
+            return
+        }
+        
+        db.collection("users")
+            .document(uid)
+            .collection("moods")
+            .document(moodId)
+            .delete { error in
+                if let error = error {
+                    completion(.failure(error))
+                } else {
+                    completion(.success(()))
+                }
+            }
     }
 }

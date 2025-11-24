@@ -5,6 +5,7 @@
 //  Created by Alvaro Limaymanta Soria on 2025-11-03.
 //
 // Play selected songs, updates album cover on song change, fetches data from Firestore not hardcoded data (DummyData) (2025-11-15)
+// Album model deleted, song cover will be shown instead (2025-11-23)
 
 import SwiftUI
 import AVFoundation
@@ -12,22 +13,26 @@ import FirebaseAuth
 import FirebaseFirestore
 
 struct NowPlayingView: View {
-    // Album data fetched from Firestore
-    @State private var album: Album?
-    
     let songs: [Song]
     let mood: Mood
     let startSong: Song?
     
     @State private var currentIndex: Int = 0
-    @State private var isFavourite = false
     @State private var transitionDirection: Edge = .top // for up/down animation (Differing from spotify and apple on purpose, cuz we're better.)
     @State private var isShuffling = false
     @State private var shuffleOrder: [Int] = []
     @State private var shufflePosition: Int = 0
-    //Without environment object the mini bar would not update what is happening in NowPlayingView (album cover, songs)
+    //Without environment object the mini bar would not update what is happening in NowPlayingView (song cover, songs)
     @EnvironmentObject private var playerState: PlayerStateManager
 
+    private var isFavourite: Bool {
+            guard let currentSong = playerState.currentSong,
+                  let song = songs.first(where: { $0.id == currentSong.id }) else {
+                return false
+            }
+            return song.isFavourite
+        }
+    
     init(mood: Mood, startSong: Song? = nil, songs: [Song]) {
         self.mood = mood
         self.startSong = startSong
@@ -85,9 +90,7 @@ struct NowPlayingView: View {
                         .padding(.leading)
                         Spacer()
                         Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                isFavourite.toggle()
-                            }
+                            toggleFavourite()
                         } label: {
                             Image(systemName: isFavourite ? "heart.fill" : "heart")
                                 .font(.system(size: 28))
@@ -145,7 +148,6 @@ struct NowPlayingView: View {
             .padding(.bottom, 30)
         }
         .onAppear {
-            fetchAlbumSong()
             playerState.showNowPlayingView()
             
             // Update current index based on current song
@@ -165,10 +167,6 @@ struct NowPlayingView: View {
                 withAnimation {
                     currentIndex = index
                 }
-                
-                //Reset album and fetch the new one
-                album = nil
-                fetchAlbumSong()
             }
         }
         
@@ -181,34 +179,38 @@ struct NowPlayingView: View {
     // Animated section
     private func movingSongContent(for song: Song) -> some View {
         VStack(spacing: 40) {
-            // Album art
             ZStack {
-                // Get album URL from Firestore
-                if let urlString = album?.coverURL,
-                   let url = URL(string: urlString) {
+                if let coverURLString = song.coverURL,
+                   let url = URL(string: coverURLString) {
                     
-                    AsyncImage(url: url) { img in
-                        img.resizable()
+                    AsyncImage(url: url) { image in
+                        image
+                            .resizable()
                             .scaledToFill()
                             .frame(width: 320, height: 320)
                             .clipShape(RoundedRectangle(cornerRadius: 25))
                     } placeholder: {
                         RoundedRectangle(cornerRadius: 25)
-                            .fill(Color.white.opacity(0.1))
+                            .fill(Color.white.opacity(0.15))
                             .frame(width: 320, height: 320)
-                            .redacted(reason: .placeholder)
+                            .overlay(
+                                ProgressView()
+                                    .foregroundColor(.white)
+                            )
                     }
                     
                 } else {
-                    // Fallback placeholder
                     RoundedRectangle(cornerRadius: 25)
                         .fill(Color.white.opacity(0.15))
                         .frame(width: 320, height: 320)
-                        .shadow(color: .white.opacity(0.1), radius: 15)
+                        .overlay(
+                            Image(systemName: "music.note")
+                                .font(.system(size: 60))
+                                .foregroundColor(.white.opacity(0.3))
+                        )
                 }
             }
-            
-            // Song title + artist
+            // song title + artist
             VStack(spacing: 8) {
                 Text(song.title)
                     .font(.title.bold())
@@ -219,7 +221,7 @@ struct NowPlayingView: View {
             }
         }
     }
-    
+
     private func playNext() {
         transitionDirection = .bottom
         
@@ -260,7 +262,7 @@ struct NowPlayingView: View {
         }
     }
     
-    //This ensure that the mini player gets the time a song is paused and played
+    //This ensures that the mini player gets the time a song is paused and played
     private func formatTime(_ seconds: TimeInterval) -> String {
         guard seconds > 0 else { return "0:00" }
         let mins = Int(seconds) / 60
@@ -285,40 +287,17 @@ struct NowPlayingView: View {
         }
     }
     
-    // Added by Alvaro - Fetch album from Firestore
-    private func fetchAlbumSong() {
-        guard let albumID = songs[currentIndex].albumID else {
-            print("❌ No albumID in song: \(songs[currentIndex].title)")
-            return
-        }
-
-        guard let userID = Auth.auth().currentUser?.uid else {
-            print("❌ No user logged in")
-            return
-        }
-
-        let ref = Firestore.firestore()
-            .collection("users").document(userID)
-            .collection("albums").document(albumID)
-
-        ref.getDocument { snap, error in
-            if let error = error {
-                print("❌ Firestore error: \(error)")
-                return
-            }
-
-            guard let snap = snap, snap.exists else {
-                print("❌ Album \(albumID) does not exist for user \(userID)")
-                return
-            }
-
-            do {
-                let album = try snap.data(as: Album.self)
-                self.album = album
-                self.playerState.currentAlbum = album // Update player state with album
-                print("✅ Album loaded:", album.name)
-            } catch {
-                print("❌ Album decoding error:", error)
+    private func toggleFavourite() {
+        guard let currentSong = playerState.currentSong,
+              let songId = currentSong.id else { return }
+        
+        SongService.shared.toggleFavourite(songId: songId) { result in
+            switch result {
+            case .success:
+                print("Favourite toggled in NowPlayingView: \(!isFavourite)")
+                // The UI will update automatically because isFavourite is a computed property
+            case .failure(let error):
+                print("Error toggling favourite: \(error.localizedDescription)")
             }
         }
     }
@@ -328,8 +307,8 @@ struct NowPlayingView: View {
     NowPlayingView(
         mood: Mood(id: "1", name: "Chill", emoji: "😌", colorName: "blue"),
         songs: [
-            Song(id: "1", title: "Sample Song", artist: "Sample Artist", albumID: "1", moodID: "1", fileName: "sample"),
-            Song(id: "2", title: "Another Song", artist: "Another Artist", albumID: "1", moodID: "1", fileName: "sample2")
+            Song(id: "1", title: "Sample Song", artist: "Sample Artist", moodID: "1", audioData: "sample"),
+            Song(id: "2", title: "Another Song", artist: "Another Artist", moodID: "1", audioData: "sample2")
         ]
     )
     .environmentObject(PlayerStateManager.shared)

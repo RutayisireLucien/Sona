@@ -10,11 +10,11 @@ import SwiftUI
 import Combine
 import AVFoundation
 
+// MARK: This is basically 'AudioManager'. I deleted that one cause i considered this would work more efficiently with the MiniBar and audio in general (didn't want to change 'AudioManager')
 class PlayerStateManager: ObservableObject {
     static let shared = PlayerStateManager()
     
     @Published var currentSong: Song?
-    @Published var currentAlbum: Album?
     @Published var isPlaying: Bool = false
     @Published var currentMood: Mood?
     @Published var isNowPlayingViewActive: Bool = false
@@ -33,10 +33,9 @@ class PlayerStateManager: ObservableObject {
         }
     }
     
-    func playSong(_ song: Song, mood: Mood, album: Album? = nil, songList: [Song] = []) {
+    func playSong(_ song: Song, mood: Mood, songList: [Song] = []) {
         self.currentSong = song
         self.currentMood = mood
-        self.currentAlbum = album
         self.currentSongList = songList.isEmpty ? [song] : songList
         loadAndPlayAudio(song: song)
         self.isPlaying = true
@@ -59,7 +58,6 @@ class PlayerStateManager: ObservableObject {
         stopProgressTimer()
         self.currentSong = nil
         self.currentMood = nil
-        self.currentAlbum = nil
         self.isPlaying = false
         self.progress = 0.0
     }
@@ -89,27 +87,57 @@ class PlayerStateManager: ObservableObject {
         }
     
     private func loadAndPlayAudio(song: Song) {
-        guard let fileName = song.fileName,
-              let url = Bundle.main.url(forResource: fileName, withExtension: "mp3") ??
-                        Bundle.main.url(forResource: fileName, withExtension: "m4a") else {
-            print("❌ Audio file not found: \(song.fileName ?? "unknown")")
-            return
-        }
-
-        do {
-            audioPlayer?.stop()
-            stopProgressTimer()
+        if let base64String = song.audioData,
+           !base64String.isEmpty {
             
-            let player = try AVAudioPlayer(contentsOf: url)
-            audioPlayer = player
-            player.delegate = audioDelegate
-            player.prepareToPlay()
-            player.play()
+            // convert Base64 string to Data
+            guard let audioData = Data(base64Encoded: base64String) else {
+                print("Failed to decode Base64 audio data")
+                return
+            }
             
-            startProgressTimer()
+            do {
+                audioPlayer?.stop()
+                stopProgressTimer()
+                
+                // create AVAudioPlayer from the decoded data
+                let player = try AVAudioPlayer(data: audioData)
+                audioPlayer = player
+                player.delegate = audioDelegate
+                player.prepareToPlay()
+                player.play()
+                
+                startProgressTimer()
+                print("Playing Base64 audio: \(audioData.count) bytes")
+                
+            } catch {
+                print("Audio playback error: \(error.localizedDescription)")
+            }
             
-        } catch {
-            print("❌ Audio playback error: \(error.localizedDescription)")
+        } else {
+            // Fallback to local file (for testing/backward compatibility)
+            guard let fileName = song.audioData,
+                  let url = Bundle.main.url(forResource: fileName, withExtension: "mp3") ??
+                            Bundle.main.url(forResource: fileName, withExtension: "m4a") else {
+                print("Audio file not found: \(song.audioData ?? "unknown")")
+                return
+            }
+            
+            do {
+                audioPlayer?.stop()
+                stopProgressTimer()
+                
+                let player = try AVAudioPlayer(contentsOf: url)
+                audioPlayer = player
+                player.delegate = audioDelegate
+                player.prepareToPlay()
+                player.play()
+                
+                startProgressTimer()
+                
+            } catch {
+                print("Audio playback error: \(error.localizedDescription)")
+            }
         }
     }
     
@@ -136,5 +164,18 @@ class PlayerStateManager: ObservableObject {
     
     func hideNowPlayingView() {
         self.isNowPlayingViewActive = false
+    }
+    
+    func handleSongDeletion(deletedSongId: String) {
+        if currentSong?.id == deletedSongId {
+            stop()
+            print("Stopped playback - song was deleted")
+        }
+        
+        currentSongList.removeAll { $0.id == deletedSongId }
+        
+        if currentSongList.isEmpty {
+            stop()
+        }
     }
 }

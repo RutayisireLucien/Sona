@@ -30,7 +30,6 @@ struct MainAppView: View {
             if let song = playerState.currentSong {
                 MiniPlayerBar(
                     song: song,
-                    album: playerState.currentAlbum,
                     isPlaying: playerState.isPlaying,
                     onPlayPause: {
                         if playerState.isPlaying {

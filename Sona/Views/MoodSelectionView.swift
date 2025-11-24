@@ -73,8 +73,6 @@ struct MoodSelectionView: View {
                         .font(.title.bold())
                 }
             }
-            
-            SearchView()
         }
         .sheet(isPresented: $showingAddMood) {
             AddMoodView()

@@ -16,10 +16,10 @@ class SongService: ObservableObject {
     
     @Published var allSongs: [Song] = []
     @Published var songsByMood: [Song] = []
-    @Published var songsByAlbum: [Song] = []
     
     private let db = Firestore.firestore()
     private let storage = Storage.storage()
+    private var listener: ListenerRegistration?
 
     init() {}
     
@@ -48,18 +48,82 @@ class SongService: ObservableObject {
             }
     }
         
+    func listenToUserSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
+        listener?.remove()
+
+        guard let uid = Auth.auth().currentUser?.uid else {
+            completion(.failure(SimpleError("No user logged in.")))
+            return
+        }
+
+        listener = db.collection("users")
+            .document(uid)
+            .collection("songs")
+            .order(by: "title")
+            .addSnapshotListener { snapshot, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+
+                let items: [Song] = snapshot?.documents.compactMap {
+                    try? $0.data(as: Song.self)
+                } ?? []
+
+                DispatchQueue.main.async {
+                    self.allSongs = items
+                }
+                completion(.success(items))
+            }
+    }
+    
+    func stopListening() {
+        listener?.remove()
+        listener = nil
+    }
+    
+    func listenToSongsByMood(_ moodID: String, completion: @escaping (Result<[Song], Error>) -> Void) {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            completion(.failure(SimpleError("No user logged in.")))
+            return
+        }
+        listener?.remove()
+
+        listener = db.collection("users")
+            .document(uid)
+            .collection("songs")
+            .whereField("moodID", isEqualTo: moodID)
+            .addSnapshotListener { snapshot, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+
+                let items: [Song] = snapshot?.documents.compactMap {
+                    try? $0.data(as: Song.self)
+                } ?? []
+
+                DispatchQueue.main.async {
+                    self.songsByMood = items
+                }
+                completion(.success(items))
+            }
+    }
+    
     func saveSong(_ song: Song, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let uid = Auth.auth().currentUser?.uid else {
             return completion(.failure(SimpleError("No user logged in")))
         }
 
         let id = song.id ?? UUID().uuidString
+        var songWithId = song
+        songWithId.id = id
         
         do {
             try db.collection("users").document(uid)
                 .collection("songs")
                 .document(id)
-                .setData(from: song) { error in
+                .setData(from: songWithId) { error in
 
                     if let error = error {
                         completion(.failure(error))
@@ -69,6 +133,64 @@ class SongService: ObservableObject {
                 }
         } catch {
             completion(.failure(error))
+        }
+    }
+    
+    func deleteSong(_ songId: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            completion(.failure(SimpleError("No user logged in.")))
+            return
+        }
+        
+        db.collection("users")
+            .document(uid)
+            .collection("songs")
+            .document(songId)
+            .delete { error in
+                if let error = error {
+                    completion(.failure(error))
+                } else {
+                    completion(.success(()))
+                }
+            }
+    }
+    
+    func toggleFavourite(songId: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            completion(.failure(SimpleError("No user logged in.")))
+            return
+        }
+        
+        let ref = db.collection("users")
+            .document(uid)
+            .collection("songs")
+            .document(songId)
+        
+        ref.getDocument { snapshot, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let snapshot = snapshot, snapshot.exists,
+                  var song = try? snapshot.data(as: Song.self) else {
+                completion(.failure(SimpleError("Song not found")))
+                return
+            }
+            
+            song.isFavourite.toggle()
+            
+            do {
+                try ref.setData(from: song) { error in
+                    if let error = error {
+                        completion(.failure(error))
+                    } else {
+                        completion(.success(()))
+                    }
+                }
+            } catch {
+                completion(.failure(error))
+            }
         }
     }
 }

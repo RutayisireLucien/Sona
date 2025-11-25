@@ -8,19 +8,56 @@
 import SwiftUI
 
 struct MainAppView: View {
+    @StateObject private var playerState = PlayerStateManager.shared
+    
     var body: some View {
-        TabView {
-            MoodSelectionView()
-                .tabItem {
-                    Label("Sona", systemImage: "waveform")
-                }
-
-            ProfileView()
-                .tabItem {
-                    Label("Profile", systemImage: "person.circle")
-                }
+        ZStack(alignment: .bottom) {
+            TabView {
+                MoodSelectionView()
+                    .tabItem {
+                        Label("Sona", systemImage: "waveform")
+                    }
+                
+                ProfileView()
+                    .tabItem {
+                        Label("Profile", systemImage: "person.circle")
+                    }
+            }
+            .tint(.pink)
+            
+            // only show when NOT in NowPlayingView
+            if let song = playerState.currentSong {
+                MiniPlayerBar(
+                    song: song,
+                    album: playerState.currentAlbum,
+                    isPlaying: playerState.isPlaying,
+                    onPlayPause: {
+                        if playerState.isPlaying {
+                            playerState.pause()
+                        } else {
+                            playerState.play()
+                        }
+                    },
+                    onExpand: {
+                        playerState.showNowPlayingView()
+                    }
+                )
+                .padding(.bottom, 60) // Add padding to avoid tab bar overlap
+                .transition(.move(edge: .bottom))
+            }
         }
-        .tint(.pink)//Made it pink cuz it looks more poppish
+        //controlled by PlayerStateManager
+        .sheet(isPresented: $playerState.isNowPlayingViewActive) {
+            if let song = playerState.currentSong,
+               let mood = playerState.currentMood {
+                NowPlayingView(
+                    mood: mood,
+                    startSong: song,
+                    songs: playerState.currentSongList.isEmpty ? [song] : playerState.currentSongList
+                )
+                .environmentObject(playerState)
+            }
+        }
     }
 }
 

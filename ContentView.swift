@@ -25,7 +25,7 @@ struct ContentView: View {
                 //register screen switcher
                 AuthGate()
             } else {
-                MainAppView()//Was wondering why profile toggle wasnt showing up....
+                MainAppView()
             }
         }
     }

@@ -2,131 +2,64 @@
 //  SearchView.swift
 //  Sona
 //
-//  Created by user285578 (Tyler) on 11/11/25.
-//
-
-import SwiftUI
-
-//
-//  SearchView.swift
-//  Sona
-//
-//  Created by Tyler Pistilli on 2025-11-07.
-//
 
 import SwiftUI
 import UIKit
 
 struct SearchView: View {
-    //
+    // MARK: - Data
     private let songs = DummyData.songs
     private let moods = DummyData.moods
     
-    
+    // MARK: - State
     @State private var searchText: String = ""
     @State private var searchMode: SearchMode = .songs
     @State private var filteredSongs: [Song] = []
     @State private var filteredMoods: [Mood] = []
     
-    //From w3School code, needed to change the picker color.
+    // MARK: - Segmented Control Styling
     init() {
         let appearance = UISegmentedControl.appearance()
-                
-                // Background of the whole control
-                appearance.backgroundColor = UIColor.white.withAlphaComponent(0.40)
-                
-                // Color of the selected segment “pill”
-                appearance.selectedSegmentTintColor = UIColor.systemPurple
-                
-                // Text color: normal (unselected)
-                appearance.setTitleTextAttributes(
-                    [.foregroundColor: UIColor.white],
-                    for: .normal
-                )
-                
-                // Text color: selected
-                appearance.setTitleTextAttributes(
-                    [.foregroundColor: UIColor.white],
-                    for: .selected
-                )
+        appearance.backgroundColor = UIColor.white.withAlphaComponent(0.18)
+        appearance.selectedSegmentTintColor = UIColor.systemPurple
+        appearance.setTitleTextAttributes([.foregroundColor: UIColor.white], for: .normal)
+        appearance.setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
     }
     
     var body: some View {
         VStack(spacing: 12) {
-            // --- SEARCH MODE PICKER ---
+            
+            // Search mode picker
             Picker("Search Type", selection: $searchMode) {
                 ForEach(SearchMode.allCases, id: \.self) { mode in
                     Text(mode.rawValue.capitalized)
                 }
             }
-            .pickerStyle(SegmentedPickerStyle())
+            .pickerStyle(.segmented)
             .padding(.horizontal)
             
-            // --- SEARCH FIELD ---
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.white.opacity(0.7))
-                
-                TextField("Search \(searchMode.rawValue)...", text: $searchText)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding(.horizontal)
-                    .onChange(of: searchText) { _ in
-                        performSearch()
-                    }
-                    .foregroundColor(Color.white)
-            }
-            .background(RoundedRectangle(cornerRadius: 18)
-                .fill(Color.purple.opacity(0.15))
+            // Search bar
+            SearchBar(
+                searchText: $searchText,
+                placeholder: "Search \(searchMode.rawValue)...",
+                onChange: performSearch
             )
             .padding(.horizontal)
             
-            
-            // --- RESULTS (Only show if text entered) ---
+            // Results
             if !searchText.isEmpty {
                 ScrollView {
                     VStack(spacing: 8) {
                         if searchMode == .songs {
-                            ForEach(filteredSongs.prefix(2), id: \.id) { song in
-                                NavigationLink(destination: NowPlayingView(mood: moodFor(song), startSong: song)) {
-                                    HStack(spacing: 16) {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(song.title)
-                                                .font(.headline)
-                                                .foregroundColor(.white)
-                                            Text(song.artist)
-                                                .font(.subheadline)
-                                                .foregroundColor(.white.opacity(0.7))
-                                        }
-                                        Spacer()
-                                    }
-                                    .padding()
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 15)
-                                            .fill(Color.purple.opacity(0.25))
-                                    )
-                                }
-                            }
+                            SongResultsList(
+                                songs: filteredSongs,
+                                moodFor: moodFor
+                            )
                         } else {
-                            ForEach(filteredMoods.prefix(2), id: \.id) { mood in
-                                NavigationLink(destination: NowPlayingView(mood: mood, startSong: songsForMood(mood).first)) {
-                                    HStack(spacing: 16) {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(mood.name)
-                                                .font(.headline)
-                                                .foregroundColor(Color(mood.colorName))
-                                            Text("Color: \(mood.colorName)")
-                                                .font(.subheadline)
-                                                .foregroundColor(.white.opacity(0.7))
-                                        }
-                                        Spacer()
-                                    }
-                                    .padding()
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 15)
-                                            .fill(Color.purple.opacity(0.25))
-                                    )
-                                }
-                            }
+                            MoodResultsList(
+                                moods: filteredMoods,
+                                songsForMood: songsForMood
+                            )
                         }
                     }
                     .padding(.horizontal)
@@ -135,6 +68,7 @@ struct SearchView: View {
             }
         }
     }
+    
     
     // MARK: - Search Logic
     private func performSearch() {
@@ -146,17 +80,16 @@ struct SearchView: View {
         
         switch searchMode {
         case .songs:
-            filteredSongs = songs.filter { song in
-                song.title.hasPrefix(searchText) || song.artist.hasPrefix(searchText)
+            filteredSongs = songs.filter {
+                $0.title.hasPrefix(searchText) || $0.artist.hasPrefix(searchText)
             }
         case .moods:
-            filteredMoods = moods.filter { mood in
-                mood.name.hasPrefix(searchText)
+            filteredMoods = moods.filter {
+                $0.name.hasPrefix(searchText)
             }
         }
     }
     
-    // MARK: - Helpers
     private func moodFor(_ song: Song) -> Mood {
         moods.first(where: { $0.id == song.moodID }) ?? moods.first!
     }
@@ -166,14 +99,118 @@ struct SearchView: View {
     }
 }
 
-// MARK: - Search Mode Enum
+
+// MARK: - Search Bar Component
+struct SearchBar: View {
+    @Binding var searchText: String
+    let placeholder: String
+    let onChange: () -> Void
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.white.opacity(0.7))
+            
+            TextField(placeholder, text: $searchText)
+                .foregroundColor(.white)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .onChange(of: searchText) { _ in onChange() }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color.purple.opacity(0.18))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+        )
+    }
+}
+
+
+// MARK: - Song Results Component
+struct SongResultsList: View {
+    let songs: [Song]
+    let moodFor: (Song) -> Mood
+    
+    var body: some View {
+        ForEach(songs.prefix(2), id: \.id) { song in
+            NavigationLink(
+                destination: NowPlayingView(
+                    mood: moodFor(song),
+                    startSong: song,               // correct fix
+                    songs: songs                    // pass list
+                )
+            ) {
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(song.title)
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        
+                        Text(song.artist)
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    Spacer()
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 15)
+                        .fill(Color.black.opacity(0.25))
+                )
+            }
+        }
+    }
+}
+
+
+// MARK: - Mood Results Component
+struct MoodResultsList: View {
+    let moods: [Mood]
+    let songsForMood: (Mood) -> [Song]
+    
+    var body: some View {
+        ForEach(moods.prefix(2), id: \.id) { mood in
+            NavigationLink(
+                destination: NowPlayingView(
+                    mood: mood,
+                    startSong: songsForMood(mood).first,
+                    songs: songsForMood(mood)
+                )
+            ) {
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(mood.name)
+                            .font(.headline)
+                            .foregroundColor(Color(mood.colorName))
+                        
+                        Text("Color: \(mood.colorName)")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    Spacer()
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 15)
+                        .fill(Color.black.opacity(0.25))
+                )
+            }
+        }
+    }
+}
+
+
 enum SearchMode: String, CaseIterable {
     case songs
     case moods
 }
 
+
+// Preview
 #Preview {
-    NavigationStack {
-        SearchView()
-    }
+    NavigationStack { SearchView() }
 }

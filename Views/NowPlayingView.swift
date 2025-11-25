@@ -4,43 +4,45 @@
 //
 //  Created by Alvaro Limaymanta Soria on 2025-11-03.
 //
+// Play selected songs, updates album cover on song change, fetches data from Firestore not hardcoded data (DummyData) (2025-11-15)
 
 import SwiftUI
 import AVFoundation
+import FirebaseAuth
+import FirebaseFirestore
 
 struct NowPlayingView: View {
-    private let songs = DummyData.songs
+    // Album data fetched from Firestore
+    @State private var album: Album?
+    
+    let songs: [Song]
     let mood: Mood
     let startSong: Song?
     
     @State private var currentIndex: Int = 0
-    @State private var isPlaying = false
     @State private var isFavourite = false
-    @State private var progress: Double = 0.0
     @State private var transitionDirection: Edge = .top // for up/down animation (Differing from spotify and apple on purpose, cuz we're better.)
-    @State private var audioPlayer: AVAudioPlayer?
-    @StateObject private var audioManager = AudioManager()
-    @State private var contextDelegate = AudioDelegate()
     @State private var isShuffling = false
     @State private var shuffleOrder: [Int] = []
     @State private var shufflePosition: Int = 0
+    //Without environment object the mini bar would not update what is happening in NowPlayingView (album cover, songs)
+    @EnvironmentObject private var playerState: PlayerStateManager
 
-    
-    init(mood: Mood, startSong: Song? = nil) {
+    init(mood: Mood, startSong: Song? = nil, songs: [Song]) {
         self.mood = mood
         self.startSong = startSong
+        self.songs = songs
         
         if let startSong = startSong,
-           let index = DummyData.songs.firstIndex(where: { $0.id == startSong.id }) {
+           let index = songs.firstIndex(where: { $0.id == startSong.id }) {
             _currentIndex = State(initialValue: index)
         } else {
             _currentIndex = State(initialValue: 0)
         }
     }
     
-    
     var body: some View {
-        let _song = songs[currentIndex]//If theres a warning, Ignore, its used for the animation function.
+        let currentSong = songs[currentIndex] // If there's a warning, Ignore, its used for the animation function.
         
         ZStack {
             // Background gradient
@@ -54,12 +56,12 @@ struct NowPlayingView: View {
             )
             .ignoresSafeArea()
             
-            //Animated
+            // Animated
             VStack(spacing: 40) {
                 ZStack {
-                    ForEach(Array(songs.enumerated()), id: \.offset) { index, s in
+                    ForEach(Array(songs.enumerated()), id: \.offset) { index, song in
                         if index == currentIndex {
-                            movingSongContent(for: s)
+                            movingSongContent(for: song)
                                 .transition(.move(edge: transitionDirection)
                                     .combined(with: .opacity))
                         }
@@ -67,7 +69,7 @@ struct NowPlayingView: View {
                 }
                 .animation(.spring(response: 0.5, dampingFraction: 0.8), value: currentIndex)
                 
-                //COntent that stays in place
+                // Content that stays in place
                 VStack(spacing: 20) {
                     HStack {
                         Button {
@@ -97,15 +99,15 @@ struct NowPlayingView: View {
                     
                     // Progress bar + times
                     VStack(spacing: 8) {
-                        ProgressView(value: audioManager.progress)
+                        ProgressView(value: playerState.progress)
                             .progressViewStyle(.linear)
                             .tint(.white)
                             .padding(.horizontal)
                         
                         HStack {
-                            Text(audioManager.formatTime(audioPlayer?.currentTime ?? 0))
+                            Text(formatTime(playerState.audioPlayer?.currentTime ?? 0))
                             Spacer()
-                            Text(audioManager.formatTime(audioPlayer?.duration ?? 0))
+                            Text(formatTime(playerState.audioPlayer?.duration ?? 0))
                         }
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.7))
@@ -114,7 +116,7 @@ struct NowPlayingView: View {
                     
                     // Controls
                     HStack(spacing: 60) {
-                        Button {//TODO: Will have to implemement song reset once we can manage the songs time.
+                        Button {
                             playPrevious()
                         } label: {
                             Image(systemName: "backward.fill")
@@ -124,7 +126,7 @@ struct NowPlayingView: View {
                         Button {
                             togglePlay()
                         } label: {
-                            Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                            Image(systemName: playerState.isPlaying ? "pause.circle.fill" : "play.circle.fill")
                                 .font(.system(size: 70))
                                 .foregroundColor(.white)
                                 .shadow(radius: 8)
@@ -142,17 +144,83 @@ struct NowPlayingView: View {
             }
             .padding(.bottom, 30)
         }
+        .onAppear {
+            fetchAlbumSong()
+            playerState.showNowPlayingView()
+
+            
+            playerState.currentSongList = songs
+
+            
+            let songToStart = startSong ?? songs[currentIndex]
+
+            if playerState.currentSong?.id != songToStart.id {
+                playerState.playSong(
+                    songToStart,
+                    mood: mood,
+                    album: album,
+                    songList: songs
+                )
+            }
+
+            if let currentSong = playerState.currentSong,
+               let index = songs.firstIndex(where: { $0.id == currentSong.id }) {
+                currentIndex = index
+            }
+        }
+
+        .onDisappear {
+            playerState.hideNowPlayingView()
+        }
+        
+        // Update current index when song changes externally (from PlayerStateManager)
+        .onChange(of: playerState.currentSong?.id) { newSongID in
+            if let newSongID = newSongID,
+               let index = songs.firstIndex(where: { $0.id == newSongID }) {
+                withAnimation {
+                    currentIndex = index
+                }
+                
+                //Reset album and fetch the new one
+                album = nil
+                fetchAlbumSong()
+            }
+        }
+        
+        // Update UI when shuffle changes
+        .onChange(of: isShuffling) { _ in
+            updateShuffleOrder()
+        }
     }
     
-    //Animated section
+    // Animated section
     private func movingSongContent(for song: Song) -> some View {
         VStack(spacing: 40) {
             // Album art
             ZStack {
-                RoundedRectangle(cornerRadius: 25)
-                    .fill(Color.white.opacity(0.15))
-                    .frame(width: 320, height: 320)
-                    .shadow(color: .white.opacity(0.1), radius: 15)
+                // Get album URL from Firestore
+                if let urlString = album?.coverURL,
+                   let url = URL(string: urlString) {
+                    
+                    AsyncImage(url: url) { img in
+                        img.resizable()
+                            .scaledToFill()
+                            .frame(width: 320, height: 320)
+                            .clipShape(RoundedRectangle(cornerRadius: 25))
+                    } placeholder: {
+                        RoundedRectangle(cornerRadius: 25)
+                            .fill(Color.white.opacity(0.1))
+                            .frame(width: 320, height: 320)
+                            .redacted(reason: .placeholder)
+                    }
+                    
+                } else {
+                    // Fallback placeholder
+                    RoundedRectangle(cornerRadius: 25)
+                        .fill(Color.white.opacity(0.15))
+                        .frame(width: 320, height: 320)
+                        .shadow(color: .white.opacity(0.1), radius: 15)
+                }
             }
             
             // Song title + artist
@@ -167,144 +235,131 @@ struct NowPlayingView: View {
         }
     }
     
-    private func playNext() { // Added by Tyler
+    private func playNext() {
         transitionDirection = .bottom
-        audioManager.stopTimer()
-        audioPlayer?.stop()
-        isPlaying = false;
         
-        withAnimation {
-            //Shuffle code
-            if isShuffling {
-                shufflePosition += 1
-                
-                if shufflePosition >= shuffleOrder.count {
-                    shufflePosition = 0
-                }
-                
-                currentIndex = shuffleOrder[shufflePosition]
-                
-            } else {//Regular playNext() code
-                if currentIndex < songs.count - 1 {
-                    currentIndex += 1
-                } else {
-                    currentIndex = 0
-                }
+        if isShuffling {
+            shufflePosition += 1
+            if shufflePosition >= shuffleOrder.count {
+                shufflePosition = 0
             }
-        }
-        playSong(songs[currentIndex])
-    }
-    
-    private func togglePlay() {// ==
-        let song = songs[currentIndex]
-        
-        if let player = audioPlayer {
-            if isPlaying {
-                player.pause()
-                isPlaying = false
-                audioManager.stopTimer()
-            }else {
-                player.play()
-                audioManager.startTimer(for: player)
-                isPlaying = true
-            }
-        } else {
-            playSong(song)
-        }
-    }
-    
-    private func playSong(_ song: Song) {
-        guard let fileName = song.fileName,
-              let url = Bundle.main.url(forResource: fileName, withExtension: "mp3") ??
-                        Bundle.main.url(forResource: fileName, withExtension: "m4a") else {
+            
+            let nextIndex = shuffleOrder[shufflePosition]
+            let nextSong = songs[nextIndex]
 
-            // File missing → fallback UI behavior
-            audioPlayer = nil
-            audioManager.progress = 0.5
-            isPlaying.toggle()
+            playerState.currentSongList = songs
+
+            playerState.playSong(nextSong, mood: mood)
+
+        } else {
+            playerState.currentSongList = songs
+            playerState.playNext()
+        }
+    }
+
+    
+    private func togglePlay() {
+        if playerState.isPlaying {
+            playerState.pause()
+        } else {
+            playerState.play()
+        }
+    }
+    
+    private func playPrevious() {
+        transitionDirection = .top
+        
+        if isShuffling {
+            shufflePosition -= 1
+            if shufflePosition < 0 {
+                shufflePosition = shuffleOrder.count - 1
+            }
+            
+            let previousIndex = shuffleOrder[shufflePosition]
+            let prevSong = songs[previousIndex]
+
+            playerState.currentSongList = songs
+
+            playerState.playSong(prevSong, mood: mood)
+
+        } else {
+            playerState.currentSongList = songs
+            playerState.playPrevious()
+        }
+    }
+
+    
+    //This ensure that the mini player gets the time a song is paused and played
+    private func formatTime(_ seconds: TimeInterval) -> String {
+        guard seconds > 0 else { return "0:00" }
+        let mins = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        return String(format: "%d:%02d", mins, secs)
+    }
+    
+    // Shuffle commands:
+    private func toggleShuffle() {
+        isShuffling.toggle()
+    }
+    
+    private func updateShuffleOrder() {
+        if isShuffling {
+            let indices = Array(0..<songs.count).filter { $0 != currentIndex }
+            shuffleOrder = indices.shuffled()
+            shuffleOrder.insert(currentIndex, at: 0)
+            shufflePosition = 0
+        } else {
+            shuffleOrder = []
+            shufflePosition = 0
+        }
+    }
+    
+    // Added by Alvaro - Fetch album from Firestore
+    private func fetchAlbumSong() {
+        guard let albumID = songs[currentIndex].albumID else {
+            print("❌ No albumID in song: \(songs[currentIndex].title)")
             return
         }
 
-        do {
-            // Create player only once
-            let player = try AVAudioPlayer(contentsOf: url)
-            audioPlayer = player
+        guard let userID = Auth.auth().currentUser?.uid else {
+            print("❌ No user logged in")
+            return
+        }
 
-            player.delegate = contextDelegate
-            
-            //Auto-skip
-            contextDelegate.onFinish = { [self] in
-                self.audioManager.stopTimer()
+        let ref = Firestore.firestore()
+            .collection("users").document(userID)
+            .collection("albums").document(albumID)
 
-                withAnimation(.easeInOut(duration: 0.5)) {
-                    self.transitionDirection = .bottom
-                    self.playNext()
-                }
+        ref.getDocument { snap, error in
+            if let error = error {
+                print("❌ Firestore error: \(error)")
+                return
             }
 
-            // Prepare & play
-            player.prepareToPlay()
-            player.play()
-            isPlaying = true
-
-            // Start updating progress
-            audioManager.startTimer(for: player)
-
-        } catch {
-            print("Audio playback error: \(error.localizedDescription)")
-            audioManager.progress = 0.0
-            isPlaying.toggle()
-        }
-    }
-
-    
-    private func playPrevious() { // ==
-        transitionDirection = .top
-        audioManager.stopTimer()
-        audioPlayer?.stop()
-        isPlaying = false;
-        withAnimation {
-            
-            if isShuffling {
-                shufflePosition -= 1
-                
-                if shufflePosition < 0 {
-                    shufflePosition = shuffleOrder.count - 1
-                }
-                
-                currentIndex = shuffleOrder[shufflePosition]
-            } else {
-                if currentIndex > 0 {
-                    currentIndex -= 1
-                } else {
-                    currentIndex = songs.count - 1
-                }
-                isPlaying = true
+            guard let snap = snap, snap.exists else {
+                print("❌ Album \(albumID) does not exist for user \(userID)")
+                return
             }
-        }
-        playSong(songs[currentIndex])
-    }
-    
-    //shuffle commands:
-    
-    private func toggleShuffle() {
-        isShuffling.toggle()
-        
-        if isShuffling {
-            let indeces = Array(0..<songs.count).filter { $0 != currentIndex }
-            shuffleOrder = indeces.shuffled()
-            
-            
-            shuffleOrder.insert(currentIndex, at: 0)
-            shufflePosition = 0
-        }
-        else {
-            shuffleOrder = []
-            shufflePosition = 0
+
+            do {
+                let album = try snap.data(as: Album.self)
+                self.album = album
+                self.playerState.currentAlbum = album // Update player state with album
+                print("✅ Album loaded:", album.name)
+            } catch {
+                print("❌ Album decoding error:", error)
+            }
         }
     }
 }
 
 #Preview {
-    NowPlayingView(mood: DummyData.moods[4], startSong: DummyData.songs[6])//Can put the indexes wherever. Leave on puzzlebox for music.
+    NowPlayingView(
+        mood: Mood(id: "1", name: "Chill", emoji: "😌", colorName: "blue"),
+        songs: [
+            Song(id: "1", title: "Sample Song", artist: "Sample Artist", albumID: "1", moodID: "1", fileName: "sample"),
+            Song(id: "2", title: "Another Song", artist: "Another Artist", albumID: "1", moodID: "1", fileName: "sample2")
+        ]
+    )
+    .environmentObject(PlayerStateManager.shared)
 }

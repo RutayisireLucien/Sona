@@ -21,11 +21,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct SonaApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+
     var body: some Scene {
         WindowGroup {
-            NavigationView {
-                ContentView()
-            }
+            ContentView()
+                .environmentObject(PlayerStateManager.shared)
         }
     }
 }
+

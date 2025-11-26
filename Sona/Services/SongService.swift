@@ -20,7 +20,7 @@ class SongService: ObservableObject {
     private let db = Firestore.firestore()
     private let storage = Storage.storage()
     private var listener: ListenerRegistration?
-
+    
     init() {}
     
     func fetchSongsByMood(_ moodID: String, userID: String, completion: @escaping (Result<[Song], Error>) -> Void) {
@@ -47,36 +47,45 @@ class SongService: ObservableObject {
                 completion(.success(list))
             }
     }
-        
-    func listenToUserSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
+    
+    
+    func listenToUserSongs(completion: ((Result<[Song], Error>) -> Void)? = nil) {
         listener?.remove()
-
+        
         guard let uid = Auth.auth().currentUser?.uid else {
-            completion(.failure(SimpleError("No user logged in.")))
+            completion?(.failure(SimpleError("No user logged in.")))
             return
         }
-
+        
         listener = db.collection("users")
             .document(uid)
             .collection("songs")
             .order(by: "title")
             .addSnapshotListener { snapshot, error in
                 if let error = error {
-                    completion(.failure(error))
                     return
                 }
-
-                let items: [Song] = snapshot?.documents.compactMap {
-                    try? $0.data(as: Song.self)
-                } ?? []
-
+                
+                guard let documents = snapshot?.documents else {
+                    completion?(.success([]))
+                    return
+                }
+                
+                let items: [Song] = documents.compactMap { document in
+                    do {
+                        let song = try document.data(as: Song.self)
+                        return song
+                    } catch {
+                        return nil
+                    }
+                }
+                
                 DispatchQueue.main.async {
                     self.allSongs = items
+                    completion?(.success(items))
                 }
-                completion(.success(items))
             }
     }
-    
     func stopListening() {
         listener?.remove()
         listener = nil
@@ -88,7 +97,7 @@ class SongService: ObservableObject {
             return
         }
         listener?.remove()
-
+        
         listener = db.collection("users")
             .document(uid)
             .collection("songs")
@@ -98,11 +107,11 @@ class SongService: ObservableObject {
                     completion(.failure(error))
                     return
                 }
-
+                
                 let items: [Song] = snapshot?.documents.compactMap {
                     try? $0.data(as: Song.self)
                 } ?? []
-
+                
                 DispatchQueue.main.async {
                     self.songsByMood = items
                 }
@@ -114,7 +123,7 @@ class SongService: ObservableObject {
         guard let uid = Auth.auth().currentUser?.uid else {
             return completion(.failure(SimpleError("No user logged in")))
         }
-
+        
         let id = song.id ?? UUID().uuidString
         var songWithId = song
         songWithId.id = id
@@ -124,7 +133,7 @@ class SongService: ObservableObject {
                 .collection("songs")
                 .document(id)
                 .setData(from: songWithId) { error in
-
+                    
                     if let error = error {
                         completion(.failure(error))
                     } else {
@@ -185,6 +194,7 @@ class SongService: ObservableObject {
                     if let error = error {
                         completion(.failure(error))
                     } else {
+                        self.updateLocalSong(song)
                         completion(.success(()))
                     }
                 }
@@ -192,5 +202,18 @@ class SongService: ObservableObject {
                 completion(.failure(error))
             }
         }
+    }
+    
+    private func updateLocalSong(_ updatedSong: Song) {
+        //update sonfgs array
+        if let index = allSongs.firstIndex(where: { $0.id == updatedSong.id }) {
+            allSongs[index] = updatedSong
+        }
+        //update moods array
+        if let index = songsByMood.firstIndex(where: { $0.id == updatedSong.id }) {
+            songsByMood[index] = updatedSong
+        }
+        
+        print("🔄 Locally updated song: \(updatedSong.title) - Favourite: \(updatedSong.isFavourite)")
     }
 }

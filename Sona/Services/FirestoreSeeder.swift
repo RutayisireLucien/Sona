@@ -6,7 +6,7 @@
 //
 // Fixed ID so songs can now match the correct album; we get moods from the Firestore, as well as albums, and songs per new user. (2025-11-15)
 // Album model deleted (2025-11-23)
-
+// MARK: PASSWORD IS 123456 FOR EVERY USER TESTED
 
 import FirebaseFirestore
 import Foundation
@@ -33,10 +33,7 @@ struct FirestoreSeeder {
         
         // Songs
         let songs: [Song] = [
-            Song(id: "4", title: "Sleepless", artist: "AVAION", moodID: "4",
-                 audioData: "Sleepless", coverURL: "https://i.scdn.co/image/ab67616d0000b273158cb15611f81555ebf97db6"),
-            Song(id: "5", title: "Puzzlebox", artist: "Aaron", moodID: "4",
-                 audioData: "Puzzlebox", coverURL: "https://i.scdn.co/image/ab67616d0000b2732ed5db5c6b5a91746cc79e39")
+
         ]
         
         for song in songs {

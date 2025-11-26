@@ -6,20 +6,22 @@
 //
 // Displays now only logged user-specific moods fetched live from Firestore. (2025-11-15)
 // Create mood and delete implemented (2025-11-20)
-
+//
 import SwiftUI
 
 struct MoodSelectionView: View {
+    
     @StateObject private var moodService = MoodService.shared
     @State private var showingAddMood = false
     @State private var showDeleteAlert = false
     @State private var moodToDelete: Mood?
+
     let columns = [GridItem(.flexible()), GridItem(.flexible())]
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
-                // Background colour
+                // --- BACKGROUND ---
                 LinearGradient(
                     colors: [
                         Color(red: 0.11, green: 0.00, blue: 0.15),
@@ -29,73 +31,96 @@ struct MoodSelectionView: View {
                     endPoint: .bottomTrailing
                 )
                 .ignoresSafeArea()
-                
+
                 ScrollView {
-                    LazyVGrid(columns: columns, spacing: 20) {
-                        ForEach(moodService.userMoods) { mood in
-                            NavigationLink(destination: SongPlaylistByMoodView(mood: mood)) {
-                                moodCard(mood) // by Alvaro
-                                //I removed this as one function to simplyfy and get chosen colour
-                                //                                VStack(spacing: 8) {
-                                //                                    Text(mood.emoji)
-                                //                                        .font(.system(size: 37))
-                                //                                    Text(mood.name)
-                                //                                        .font(.title3.bold())
-                                //                                        .foregroundColor(.white)
-                                //                                }
-                                //                                .padding(15)
-                                //                                .frame(maxWidth: 170, minHeight: 105)
-                                //                                .background(
-                                //                                    RoundedRectangle(cornerRadius: 20)
-                                //                                        .fill(Color(mood.colorName))
-                                //                                )
+                    VStack(spacing: 24) {
+
+                        // --- MOOD GRID ---
+                        LazyVGrid(columns: columns, spacing: 20) {
+
+                            ForEach(moodService.userMoods) { mood in
+                                NavigationLink(destination: SongPlaylistByMoodView(mood: mood)) {
+                                    moodCard(mood)
+                                }
+                                .buttonStyle(.plain)
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        deleteMood(mood)
+                                    } label: {
+                                        Label("Delete Mood", systemImage: "trash")
+                                    }
+                                }
+                            }
+
+                            // --- ADD MOOD BUTTON ---
+                            Button {
+                                showingAddMood = true
+                            } label: {
+                                addMoodCard
                             }
                             .buttonStyle(.plain)
                         }
-                        
-                        //Add mood rectangle
-                        Button {
-                            showingAddMood = true
-                        } label: {
-                            addMoodCard
+                        .padding(.horizontal)
+
+                        // --- SEARCH SECTION ---
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Search Songs & Moods")
+                                .font(.title3.bold())
+                                .foregroundColor(.white)
+                                .padding(.horizontal)
+
+                            SearchView()
+                                .padding(.horizontal)
                         }
-                        .buttonStyle(.plain)
+                        .padding(.bottom, 30)
                     }
-                    .padding()
                 }
             }
-            //We use toolbar to be able to change the title style
+
+            // --- TOOLBAR TITLE ---
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Text("Select Your Mood 🎧")
-                        .padding(.top, 60)
                         .foregroundColor(.white)
                         .font(.title.bold())
                 }
             }
-        }
-        .sheet(isPresented: $showingAddMood) {
-            AddMoodView()
-        }
-        .onAppear {
-            moodService.listenToUserMoods()
-        }
-        .onDisappear {
-            moodService.stopListening()
-        }
-        .alert("Delete Mood", isPresented: $showDeleteAlert, presenting: moodToDelete) { mood in
-            Button("Cancel", role: .cancel) {
-                moodToDelete = nil
+
+            // --- ADD MOOD SHEET ---
+            .sheet(isPresented: $showingAddMood) {
+                AddMoodView()
             }
-            Button("Delete", role: .destructive) {
-                confirmDelete()
+
+            // --- DELETE ALERT ---
+            .alert(
+                "Delete Mood",
+                isPresented: $showDeleteAlert,
+                presenting: moodToDelete
+            ) { mood in
+                Button("Cancel", role: .cancel) {
+                    moodToDelete = nil
+                }
+
+                Button("Delete", role: .destructive) {
+                    confirmDelete()
+                }
+            } message: { mood in
+                Text("Are you sure you want to delete \"\(mood.name)\"? This will also remove all songs associated with this mood.")
             }
-        } message: { mood in
-            Text("Are you sure you want to delete \"\(mood.name)\"? This will also remove all songs associated with this mood.")
+
+            // --- FIRESTORE LISTENERS ---
+            .onAppear {
+                moodService.listenToUserMoods()
+            }
+            .onDisappear {
+                moodService.stopListening()
+            }
         }
     }
     
-    //Added by Alvaro
+    
+    // MARK: - COMPONENTS
+    
     private func moodCard(_ mood: Mood) -> some View {
         VStack(spacing: 8) {
             Text(mood.emoji)
@@ -110,16 +135,8 @@ struct MoodSelectionView: View {
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color(mood.colorName))
         )
-        .contextMenu {
-            Button(role: .destructive) {
-                deleteMood(mood)
-            } label: {
-                Label("Delete Mood", systemImage: "trash")
-            }
-        }
     }
     
-    //added by Alvaro
     private var addMoodCard: some View {
         VStack(spacing: 8) {
             Image(systemName: "plus.circle.fill")
@@ -141,13 +158,14 @@ struct MoodSelectionView: View {
         )
     }
     
-    //Adde by Alvaro
+    
+    // MARK: - DELETE MOOD LOGIC
+    
     private func deleteMood(_ mood: Mood) {
         moodToDelete = mood
         showDeleteAlert = true
     }
     
-    //Added by alvaro
     private func confirmDelete() {
         guard let mood = moodToDelete, let moodId = mood.id else { return }
         

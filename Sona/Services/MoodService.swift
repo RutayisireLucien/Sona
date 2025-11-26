@@ -14,7 +14,6 @@ import FirebaseAuth
 
 class MoodService: ObservableObject {
     static let shared = MoodService()
-    @Published var moods: [Mood] = []
     @Published var userMoods: [Mood] = []
     private let db = Firestore.firestore()
     private var listener: ListenerRegistration?

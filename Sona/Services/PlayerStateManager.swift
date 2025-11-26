@@ -76,7 +76,8 @@ class PlayerStateManager: ObservableObject {
     
     func playPrevious() {
             guard let currentSong = currentSong,
-                  let currentIndex = currentSongList.firstIndex(where: { $0.id == currentSong.id }) else { return }
+                  let currentIndex = currentSongList.firstIndex(where: { $0.id == currentSong.id }) else { return
+            }
             
             let previousIndex = (currentIndex - 1 + currentSongList.count) % currentSongList.count
             let previousSong = currentSongList[previousIndex]

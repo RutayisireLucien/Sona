@@ -18,20 +18,27 @@ struct NowPlayingView: View {
     let startSong: Song?
     
     @State private var currentIndex: Int = 0
-    @State private var transitionDirection: Edge = .top // for up/down animation (Differing from spotify and apple on purpose, cuz we're better.)
+    @State private var transitionDirection: Edge = .top
+    // for up/down animation (Differing from spotify and apple on purpose, cuz we're better.)
     @State private var isShuffling = false
     @State private var shuffleOrder: [Int] = []
     @State private var shufflePosition: Int = 0
+    @ObservedObject private var songService = SongService.shared
     //Without environment object the mini bar would not update what is happening in NowPlayingView (song cover, songs)
     @EnvironmentObject private var playerState: PlayerStateManager
 
     private var isFavourite: Bool {
-            guard let currentSong = playerState.currentSong,
-                  let song = songs.first(where: { $0.id == currentSong.id }) else {
-                return false
-            }
-            return song.isFavourite
+        guard let currentSong = playerState.currentSong else { return false }
+        
+        return songService.allSongs.first(where: { $0.id == currentSong.id })?.isFavourite ?? false
+    }
+    
+    private var currentSong: Song? {
+        guard !songs.isEmpty, currentIndex >= 0, currentIndex < songs.count else {
+            return nil
         }
+        return songs[currentIndex]
+    }
     
     init(mood: Mood, startSong: Song? = nil, songs: [Song]) {
         self.mood = mood
@@ -47,8 +54,6 @@ struct NowPlayingView: View {
     }
     
     var body: some View {
-        let currentSong = songs[currentIndex] // If there's a warning, Ignore, its used for the animation function.
-        
         ZStack {
             // Background gradient
             LinearGradient(
@@ -150,27 +155,33 @@ struct NowPlayingView: View {
         .onAppear {
             playerState.showNowPlayingView()
             
-            // Update current index based on current song
             if let currentSong = playerState.currentSong,
-               let index = songs.firstIndex(where: { $0.id == currentSong.id }) {
+               let index = songs.firstIndex(where: { $0.id == currentSong.id }),
+               index >= 0 && index < songs.count {
                 currentIndex = index
+            } else if !songs.isEmpty {
+                currentIndex = 0
+                playerState.currentSong = songs[0]
             }
+            songService.listenToUserSongs()
         }
         .onDisappear {
             playerState.hideNowPlayingView()
+            songService.stopListening()
         }
         
-        // Update current index when song changes externally (from PlayerStateManager)
+        // update current index when song changes externally
         .onChange(of: playerState.currentSong?.id) { newSongID in
             if let newSongID = newSongID,
-               let index = songs.firstIndex(where: { $0.id == newSongID }) {
+               let index = songs.firstIndex(where: { $0.id == newSongID }),
+               index >= 0 && index < songs.count {
                 withAnimation {
                     currentIndex = index
                 }
             }
         }
         
-        // Update UI when shuffle changes
+        // update UI when shuffle changes
         .onChange(of: isShuffling) { _ in
             updateShuffleOrder()
         }
@@ -223,6 +234,8 @@ struct NowPlayingView: View {
     }
 
     private func playNext() {
+        guard !songs.isEmpty else { return }
+        
         transitionDirection = .bottom
         
         if isShuffling {
@@ -231,8 +244,10 @@ struct NowPlayingView: View {
                 shufflePosition = 0
             }
             let nextIndex = shuffleOrder[shufflePosition]
-            playerState.currentSong = songs[nextIndex]
-            playerState.play()
+            if nextIndex >= 0 && nextIndex < songs.count {
+                playerState.currentSong = songs[nextIndex]
+                playerState.play()
+            }
         } else {
             playerState.playNext()
         }
@@ -247,6 +262,8 @@ struct NowPlayingView: View {
     }
     
     private func playPrevious() {
+        guard !songs.isEmpty else { return }
+        
         transitionDirection = .top
         
         if isShuffling {
@@ -255,8 +272,10 @@ struct NowPlayingView: View {
                 shufflePosition = shuffleOrder.count - 1
             }
             let previousIndex = shuffleOrder[shufflePosition]
-            playerState.currentSong = songs[previousIndex]
-            playerState.play()
+            if previousIndex >= 0 && previousIndex < songs.count {
+                playerState.currentSong = songs[previousIndex]
+                playerState.play()
+            }
         } else {
             playerState.playPrevious()
         }
@@ -276,6 +295,8 @@ struct NowPlayingView: View {
     }
     
     private func updateShuffleOrder() {
+        guard !songs.isEmpty else { return }
+        
         if isShuffling {
             let indices = Array(0..<songs.count).filter { $0 != currentIndex }
             shuffleOrder = indices.shuffled()

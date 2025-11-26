@@ -13,14 +13,23 @@ import SwiftUI
 struct SongPlaylistByMoodView: View {
     let mood: Mood
     @ObservedObject private var songService = SongService.shared
-    @State private var songs: [Song] = []
-    @State private var favouriteSongs: [Song] = []
     @State private var showingAddSong = false
     @State private var songToDelete: Song?
     @State private var showingDeleteAlert = false
     @State private var selectedTab = 0
-    
     @EnvironmentObject private var playerState: PlayerStateManager
+    
+    private var songs: [Song] {
+        songService.songsByMood
+    }
+    
+    private var favouriteSongs: [Song] {
+        songs.filter { $0.isFavourite }
+    }
+    
+    private var displayedSongs: [Song] {
+        selectedTab == 0 ? songs : favouriteSongs
+    }
     
     var body: some View {
         ZStack {
@@ -118,10 +127,6 @@ struct SongPlaylistByMoodView: View {
         }
     }
     
-    private var displayedSongs: [Song] {
-        selectedTab == 0 ? songs : favouriteSongs
-    }
-    
     private func startListeningToSongs() {
         guard let moodID = mood.id else { return }
         
@@ -132,8 +137,6 @@ struct SongPlaylistByMoodView: View {
                 for song in fetchedSongs {
                     print("\(song.title) - Favourite: \(song.isFavourite)")
                 }
-                self.songs = fetchedSongs
-                self.favouriteSongs = fetchedSongs.filter { $0.isFavourite }
             case .failure(let error):
                 print("Listener error: \(error.localizedDescription)")
                 self.fetchSongsForMood()
@@ -155,8 +158,6 @@ struct SongPlaylistByMoodView: View {
             switch result {
             case .success(let fetchedSongs):
                 print("Fetched \(fetchedSongs.count) songs")
-                self.songs = fetchedSongs
-                self.favouriteSongs = fetchedSongs.filter { $0.isFavourite }
             case .failure(let error):
                 print("Error fetching songs: \(error.localizedDescription)")
             }
